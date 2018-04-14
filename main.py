@@ -1,135 +1,246 @@
+#!/usr/bin/env python
+
+"""
+Receives MQTT Messages, maps sensor names to coordinates,
+stores sensor status & connects to plugins
+"""
+
+__author__ = "Lukas Gartlehner"
+__copyright__ = "Lukas Gartlehner"
+__version__ = "0.1"
+__email__ = "l.gartlehner@gmx.at"
+__status__ = "Development"
+
+# ---------------------------------------------------
+# Standard Libs
 from glob import glob
-from os.path import dirname, join, basename
-
+import os.path
+import time
+import sys
 import json
+import pkgutil
+from threading import Thread
 
+# ---------------------------------------------------
+# 3rd Party Libs (install with pip)
+import numpy
 import paho.mqtt.client as mqtt
 
-import time
-import numpy
-import sys
+# ---------------------------------------------------
+# Custom Modules
+import appconfig as conf
+import plugins
+
+
 
 
 class AudioApp():
 
-    appStatus = ''
     processBar =  '<<==>>                               '
     processBarLeft = True
-    zones = {'Zone1': 0, 'Zone2': 0, 'Zone3': 0, 'Zone4': 0}
+    seperator = "-----------------------------------------"
+    printVal = []
+    activePlugin = ''
+    userInput = ''
+    printedLines = 0
 
     def build(self):
+        
+        # init mqtt
+        self.client = mqtt.Client(conf.brokerSettings['client'])
+        self.client.connect(conf.brokerSettings['address'], conf.brokerSettings['port'])
+        self.client.subscribe(conf.brokerSettings['topic'])
 
-        # Start MQTT Subscription
-        self.broker_settings = {'address': '192.168.0.28', 'topic': 'sensorHit', 'client': 'Luke'}
-
-        self.client = mqtt.Client(self.broker_settings['client'])
-        self.client.connect(self.broker_settings['address'], 1883)
-        self.client.subscribe(self.broker_settings['topic'])
+        # setup callback
         self.client.on_message=self.on_message
         self.client.loop_start()
 
-        print("Waiting for MQTT Input")
-        print(self.broker_settings)
+        print("MQTT Config: " + str(conf.brokerSettings))
         print('')
 
         # Build 5x5 numpy grids
-        self.gridModel = numpy.zeros((5, 5), dtype=numpy.int8)
-        self.gridSubtract = (numpy.ones((5, 5), dtype=numpy.int8))*3
-        self.drawGrid(False)
-
+        self.gridModel = numpy.zeros((5, 5), dtype=numpy.int16)
+        self.gridSubtract = (numpy.ones((5, 5), dtype=numpy.int8))*4 
         
+
+        Thread(target=self.user_input, args=()).start() 
+
+        self.available_plugins()
+
+
+        self.drawGrid(False)
+        self.use_plugin(0)
+
+          
+
+
+    def available_plugins(self):
+        
+        """ Gets all python files from /plugins """
+
+        pluginsPath = os.path.dirname(plugins.__file__)
+        pluginModules = [name for _, name, _ in pkgutil.iter_modules([pluginsPath])]
+        self.allPlugins = []
+
+        print("Available Plugins:")
+        for plugin in pluginModules:
+            self.allPlugins.append(plugin)
+            print(str(len(self.allPlugins)) + ". " +plugin)
+        print(self.seperator)
+
+
+
+
+
+    def use_plugin(self, pluginNumber):
+
+        """ imports and instantiates a plugin from the list """
+
+        try:
+            pluginName ="plugins."+self.allPlugins[pluginNumber]
+            __import__(pluginName)
+            sys.modules[pluginName]
+            self.plugin = sys.modules[pluginName].MyPlugin(self.on_plugin_receive)
+            self.activePlugin = self.allPlugins[pluginNumber]
+        except:
+            self.print_proxy("Error loading plugin")
+        
+
+
+
+    def on_plugin_receive(self, payload, topic=conf.brokerSettings['topic']):
+
+        """ Callback for the plugin """
+
+        self.print_proxy(str(payload))
+
+        """
+        ->>> uncomment this block to publish payload on MQTT
+
+        payload = json.dumps(payload)
+        self.print_proxy("sent payload " + payload)
+        self.client.publish(topic, json.dumps(payload))
+        """
 
 
     def on_message(self, client, userdata, message):
 
         '''
         Callback for MQTT messages
-        Reads a value for x/y coordinate and writes it in to numpy matrix
-
-        Example JSON
-
-        {"x": 1, "y": 1, "v": 100}
+        {"k": "XXX", "v": 100}
         '''
 
-        val = json.loads(str(message.payload.decode("utf-8")))    
+        val = json.loads(str(message.payload.decode("utf-8")))   
 
         try:
-            x = val['x']
-            y = val['y']
+            k = conf.SensorMapping[val['k']]
             v = int(val['v'])
 
-            self.gridModel[y,x] = v
-            self.appStatus = 'Added ' + str(message.payload.decode("utf-8"))
+            self.gridModel[k] = v
+            self.print_proxy('Added ' + str(message.payload.decode("utf-8")))
+
+            Thread(target=self.plugin.update, args=(self.gridModel,)).start() 
+
+
         except:
-            self.appStatus = 'Could not digest ' + str(message.payload.decode("utf-8"))
+            self.print_proxy('Could not digest ' + str(message.payload.decode("utf-8")))
 
 
 
     def drawGrid(self, removePrevOut=True):
 
         '''
-        Draws out the [5x5] array to print
+        Pseudo-GUI for status overview
+        Draws out the [5x5] array and prints user-input and app-status to bash
         '''
 
+        # delete previous outputs from bash
         if removePrevOut:
-            for x in range (0,11):
+            for x in range (0,9):
                 sys.stdout.write("\033[F") #back to previous line
                 sys.stdout.write("\033[K") #clear line
 
-        
+        # check user-input
+        if self.userInput != '':
 
-        if len(self.appStatus) > 0:
-            print(str(self.appStatus).replace('\n', ' ').replace('\r', ''))
-            self.appStatus=''
+            if (self.userInput == 'c'):
+                self.clear_printed_lines()
 
-        bar = self.updateProcessBar()
-        print(bar)
+
+            else:
+                self.print_proxy("Command: " + str(self.userInput))
+                try:
+                    self.use_plugin(int(self.userInput)-1)
+                except ValueError as ex:
+                    self.print_proxy("Invalid command sequence")
+                self.userInput='' 
+
+
+        # send all collected std-out to bash
+        for line in self.printVal:
+            print(line)
+        self.printVal = []
+
+        print(self.seperator)
+
+        # pseudo-GUI
+        self.processBar, self.processBarLeft = self.updateProcessBar(self.processBar, self.processBarLeft)
+        print "[",self.processBar,"]"
 
         for row in self.gridModel:
             rowToStr = ''
-            for cell in row:
+            for cell in row: 
                 rowToStr += " [" + str(cell).zfill(3) + "] "
             print(rowToStr)
 
-        print(bar)
-        self.gridModel = numpy.clip(self.gridModel - self.gridSubtract, 0, 100)
+        print "[",self.processBar,"]"
+        print "Using Plugin: ", self.activePlugin 
+
+        # subtract from values in the matrix
+        self.gridModel = numpy.clip(self.gridModel - self.gridSubtract, 0, 256)
 
 
-        self.zones['Zone1'] = numpy.average(self.gridModel[:3,:3])
-        self.zones['Zone2'] = numpy.average(self.gridModel[:3,2:])
-        self.zones['Zone3'] = numpy.average(self.gridModel[2:,:3])
-        self.zones['Zone4'] = numpy.average(self.gridModel[2:,2:])
 
-        for x,y in self.zones.iteritems():
-            print(x + ': ' + str(round(y,2)))
+    def print_proxy(self, msg):
 
+        """ use this method instead of print() to keep interactive bash output """
+        self.printedLines += 1
+        self.printVal.append(str(msg))
 
-    def updateProcessBar(self):
-        '''
-        Super-Nice bash process bar
-        '''
-        if self.processBar[0]=='<':
-            self.processBarLeft=True
+    def clear_printed_lines(self):
+        for x in range (0,self.printedLines):
+            sys.stdout.write("\033[F") #back to previous line
+            sys.stdout.write("\033[K") #clear line
 
-        if self.processBar[-1]=='>':
-            self.processBarLeft=False
-
-        if self.processBarLeft:
-            self.processBar = self.processBar[-1] + self.processBar[:-1]
-        else:
-            self.processBar = self.processBar[1:] + self.processBar[0]
+        self.printedLines=0
 
 
-        return "[" + self.processBar + "]"
+    def updateProcessBar(self, bar, left):
+        
+        """ Fancy Bash-Processing-Bar """
+
+        bar = bar[-1] + bar[:-1] if left else bar[1:] + bar[0]
+        if (bar[0]=='<') or (bar[-1]=='>'): left=(not left)
+        
+        return bar, left
+
+
+    def user_input(self):
+
+        """ Wait for user input - start as Thread to allow non-blocking I/O """
+        
+        while True:
+            self.userInput = raw_input("")
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
 
 
     def run(self):
         self.build()
 
         while True:
-            time.sleep(0.2)
+            time.sleep(0.1)
             self.drawGrid()
-
 
 
 
