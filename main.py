@@ -3,6 +3,11 @@
 """
 Receives MQTT Messages, maps sensor names to coordinates,
 stores sensor status & connects to plugins
+
+Sources:
+[Plugin Mechanism]      https://codereview.stackexchange.com/questions/2892/minimal-python-plugin-mechanism
+[Dynamic Imports]       https://www.blog.pythonlibrary.org/2012/07/31/advanced-python-how-to-dynamically-load-modules-or-classes/
+[Threading]             http://sebastiandahlgren.se/2014/06/27/running-a-method-as-a-background-thread-in-python/
 """
 
 __author__ = "Lukas Gartlehner"
@@ -43,6 +48,7 @@ class AudioApp():
     activePlugin = ''
     userInput = ''
     printedLines = 0
+    appRunning=True
 
     def build(self):
         
@@ -62,9 +68,9 @@ class AudioApp():
         self.gridModel = numpy.zeros((5, 5), dtype=numpy.int16)
         self.gridSubtract = (numpy.ones((5, 5), dtype=numpy.int8))*4 
         
-
         Thread(target=self.user_input, args=()).start() 
-
+            
+        
         self.available_plugins()
 
 
@@ -166,6 +172,9 @@ class AudioApp():
             if (self.userInput == 'c'):
                 self.clear_printed_lines()
 
+            elif (self.userInput == 'x'):
+                self.appRunning=False
+                sys.exit()
 
             else:
                 self.print_proxy("Command: " + str(self.userInput))
@@ -229,7 +238,7 @@ class AudioApp():
 
         """ Wait for user input - start as Thread to allow non-blocking I/O """
         
-        while True:
+        while self.appRunning:
             self.userInput = raw_input("")
             sys.stdout.write("\033[F")
             sys.stdout.write("\033[K")
@@ -238,7 +247,7 @@ class AudioApp():
     def run(self):
         self.build()
 
-        while True:
+        while self.appRunning:
             time.sleep(0.1)
             self.drawGrid()
 
