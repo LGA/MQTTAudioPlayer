@@ -106,7 +106,7 @@ class AudioApp():
             pluginName ="plugins."+self.allPlugins[pluginNumber]
             __import__(pluginName)
             sys.modules[pluginName]
-            self.plugin = sys.modules[pluginName].MyPlugin(self.on_plugin_receive)
+            self.plugin = sys.modules[pluginName].MyPlugin(self.on_plugin_receive, conf)
             self.activePlugin = self.allPlugins[pluginNumber]
         except:
             self.print_proxy("Error loading plugin")
@@ -195,7 +195,7 @@ class AudioApp():
 
         # pseudo-GUI
         self.processBar, self.processBarLeft = self.updateProcessBar(self.processBar, self.processBarLeft)
-        print "[",self.processBar,"]"
+        print("[",self.processBar,"]")
 
         for row in self.gridModel:
             rowToStr = ''
@@ -203,8 +203,8 @@ class AudioApp():
                 rowToStr += " [" + str(cell).zfill(3) + "] "
             print(rowToStr)
 
-        print "[",self.processBar,"]"
-        print "Using Plugin: ", self.activePlugin 
+        print("[",self.processBar,"]")
+        print("Using Plugin: ", self.activePlugin)
 
         # subtract from values in the matrix
         self.gridModel = numpy.clip(self.gridModel - self.gridSubtract, 0, 256)

@@ -18,20 +18,24 @@ import sys
 
 class MyPlugin():
 
-    def __init__(self, cb):
+    def __init__(self, cb, conf):
         
         self.mqtt_callback = cb
         self.path = os.path.dirname(os.path.abspath(__file__)).replace("\plugins", "\media")
-        command = ""
-        for ...
-            command += "l A 1 ../media/soundset1/A1.wav,"
 
+        command = ""
+        for k in conf.SensorNames:
+            sensorName = conf.SensorNames[k]
+            filename = sensorName.replace(" ","")
+            command += "l "+sensorName+" ../media/set1/"+filename+".wav,"
+        
+        self.mqtt_callback("command: "+command)
         os.system("echo '" + command + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
 
 
     def update(self, gridModel, sensorName):
         os.system("echo 'p " + sensorName + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
 
-        self.mqtt_callback("HELLO - PLUGIN 1 is calling back ")
+        self.mqtt_callback("echo 'p " + sensorName + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
 
 
