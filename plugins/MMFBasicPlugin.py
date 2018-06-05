@@ -26,7 +26,8 @@ class MoonMelonPlugin():
         self.path = os.path.dirname(os.path.abspath(__file__)).replace("\plugins", "\media")
         command = ""
 
-        for k, v in sorted(conf.SensorNames.iteritems()):
+        for k in conf.SensorNames:
+            v = conf.SensorNames[k]
             command += "l " + v + "../media/set1/" + v.replace(" ", "") + ".wav,"
         
         self.mqtt_callback("command: "+command)
