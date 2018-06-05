@@ -55,6 +55,12 @@ class AudioApp():
         # init mqtt
         self.client = mqtt.Client(conf.brokerSettings['client'])
         self.client.connect(conf.brokerSettings['address'], conf.brokerSettings['port'])
+
+        # wait for MQTT connection
+        # TODO: implement proper callback https://www.eclipse.org/paho/clients/python/docs/
+        #       with error handling on failed connection
+        time.sleep(0.5)
+
         self.client.subscribe(conf.brokerSettings['topic'])
 
         # setup callback
@@ -106,8 +112,9 @@ class AudioApp():
             pluginName ="plugins."+self.allPlugins[pluginNumber]
             __import__(pluginName)
             sys.modules[pluginName]
-            self.plugin = sys.modules[pluginName].MyPlugin(self.on_plugin_receive)
+            self.plugin = sys.modules[pluginName].MoonMelonPlugin(self.on_plugin_receive, conf)
             self.activePlugin = self.allPlugins[pluginNumber]
+
         except:
             self.print_proxy("Error loading plugin")
         
@@ -147,7 +154,8 @@ class AudioApp():
             self.gridModel[pos] = v
             self.print_proxy('Added ' + str(message.payload.decode("utf-8")))
 
-            Thread(target=self.plugin.update, args=(self.gridModel, sensorName)).start() 
+            #Thread(target=self.plugin.update, args=(self.gridModel, sensorName)).start() 
+            self.plugin.update(self.gridModel, sensorName)
 
         except:
             self.print_proxy('Could not digest ' + str(message.payload.decode("utf-8")))
