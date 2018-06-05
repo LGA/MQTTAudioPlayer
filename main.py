@@ -139,14 +139,15 @@ class AudioApp():
         val = json.loads(str(message.payload.decode("utf-8")))   
 
         try:
-            k = conf.SensorMapping[val['k']]
+            sensorId = val['k']
+            pos = conf.SensorMapping[sensorId]
+            sensorName = conf.SensorNames[sensorId]
             v = int(val['v'])
 
-            self.gridModel[k] = v
+            self.gridModel[pos] = v
             self.print_proxy('Added ' + str(message.payload.decode("utf-8")))
 
-            Thread(target=self.plugin.update, args=(self.gridModel,)).start() 
-
+            Thread(target=self.plugin.update, args=(self.gridModel, sensorName)).start() 
 
         except:
             self.print_proxy('Could not digest ' + str(message.payload.decode("utf-8")))

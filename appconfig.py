@@ -12,3 +12,10 @@ SensorMapping = {
     "EA": (4,0), "EB": (4,1), "EC": (4,2), "ED": (4,3), "EE" : (4,4)
 }
 
+SensorNames = {
+    "AA": "A 1", "AB": "A 2", "AC": "A 3", "AD": "A 4", "AE" : "A 5",
+    "BA": "B 1", "BB": "B 2", "BC": "B 3", "BD": "B 4", "BE" : "B 5",
+    "CA": "C 1", "CB": "C 2", "CC": "C 3", "CD": "C 4", "CE" : "C 5",
+    "DA": "D 1", "DB": "D 2", "DC": "D 3", "DD": "D 4", "DE" : "D 5",
+    "EA": "E 1", "EB": "E 2", "EC": "E 3", "ED": "E 4", "EE" : "E 5"
+}
