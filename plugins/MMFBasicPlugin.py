@@ -16,18 +16,18 @@ import sys
 # 3rd Party Libs (install with pip)
 
 
-class MyPlugin():
+class MoonMelonPlugin():
 
     def __init__(self, cb, conf):
         
         self.mqtt_callback = cb
-        self.path = os.path.dirname(os.path.abspath(__file__)).replace("\plugins", "\media")
+        self.conf = conf
 
+        self.path = os.path.dirname(os.path.abspath(__file__)).replace("\plugins", "\media")
         command = ""
-        for k in conf.SensorNames:
-            sensorName = conf.SensorNames[k]
-            filename = sensorName.replace(" ","")
-            command += "l "+sensorName+" ../media/set1/"+filename+".wav,"
+
+        for k, v in sorted(conf.SensorNames.iteritems()):
+            command += "l " + v + "../media/set1/" + v.replace(" ", "") + ".wav,"
         
         self.mqtt_callback("command: "+command)
         os.system("echo '" + command + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
