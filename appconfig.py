@@ -1,5 +1,5 @@
 brokerSettings = {
-    'address'   : '192.168.0.28',
+    'address'   : '192.168.0.73',
     'port'      : 1883,
     'topic'     : 'sensorHit', 
     'client'    : 'Luke'}

@@ -28,7 +28,7 @@ class MoonMelonPlugin():
 
         for k in conf.SensorNames:
             v = conf.SensorNames[k]
-            command += "l " + v + "../media/set1/" + v.replace(" ", "") + ".wav,"
+            command += v + " load ../media/loops1/" + v.replace(" ", "") + ".wav,"
         
         self.mqtt_callback("command: "+command)
         os.system("echo '" + command + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
@@ -37,6 +37,6 @@ class MoonMelonPlugin():
     def update(self, gridModel, sensorName):
         os.system("echo 'p " + sensorName + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
 
-        self.mqtt_callback("echo 'p " + sensorName + "' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
+        self.mqtt_callback("echo '"sensorName + " play' | /Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend 3000 localhost udp")
 
 

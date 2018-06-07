@@ -151,15 +151,15 @@ class AudioApp():
             sensorName = conf.SensorNames[sensorId]
             v = int(val['v'])
 
-            self.gridModel[pos] = v
-            self.print_proxy('Added ' + str(message.payload.decode("utf-8")))
-
-            #Thread(target=self.plugin.update, args=(self.gridModel, sensorName)).start() 
-            self.plugin.update(self.gridModel, sensorName)
 
         except:
             self.print_proxy('Could not digest ' + str(message.payload.decode("utf-8")))
 
+        self.gridModel[pos] = v
+        self.print_proxy('Added ' + str(message.payload.decode("utf-8")))
+
+        #Thread(target=self.plugin.update, args=(self.gridModel, sensorName)).start() 
+        self.plugin.update(self.gridModel, sensorName)
 
 
     def drawGrid(self, removePrevOut=True):
