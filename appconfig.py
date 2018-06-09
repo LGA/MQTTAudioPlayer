@@ -4,6 +4,9 @@ brokerSettings = {
     'topic'     : 'sensorHit', 
     'client'    : 'Luke'}
 
+SystemSettings = {
+    'pdSendPath': '/Applications/Pd-0.48-1.app/Contents/Resources/bin/pdsend'
+}
 SensorMapping = {
     "AA": (0,0), "AB": (0,1), "AC": (0,2), "AD": (0,3), "AE" : (0,4),
     "BA": (1,0), "BB": (1,1), "BC": (1,2), "BD": (1,3), "BE" : (1,4),
